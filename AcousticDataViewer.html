@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acoustic Data Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
+            font-family: Helvetica;
+
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Initial popup */
+        #popup-container {
+            display: block;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            text-align: center;
+        }
+        button {
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            margin: 0 10px;
+            padding: 10px 20px;
+            cursor: pointer;
+        } button:hover {
+            background-color: #66b9f0;
+        }
+
+        .hiddenButton {
+            display: none;
+        }
+
+        input[type="file"] {
+            cursor: pointer;
+        }
+        input[type="range"] {
+            cursor: pointer;
+            width: 100%;
+            margin-left: 10px;
+        }
+        input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .container {
+            flex: 1;
+            height: 100%;
+            display: flex;
+        }
+
+        .instrument {
+            flex: 1;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+        }
+
+        .loadButton {
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        /* Controls container */
+        .instrument-controls {
+            display: flex;
+            flex-direction: row;
+            height: 60px;
+            background-color: #f0f0f0;
+            padding: 10px;
+            width: 90%;
+        }
+        .instrument-name {
+            margin-bottom: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            max-width: 30%;
+        }
+        .instrument-name input {
+            border: none;
+            font-weight: bold;
+            font-size: 16px;
+            outline: none;
+            margin-right: 15px;
+            max-width: 100%;
+        }
+        .controls-container {
+            margin-top: 10px;
+            width: 100%;
+        }
+        .frequency-container {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+        }
+        .frequency-container input[type='number'] {
+            border: none;
+            outline: none;
+            font-size: 16px;
+            width: 20%;
+            min-width: 50px;
+        }
+
+
+        /* Collapse */
+        .collapse-title {
+            font-weight: bold;
+            background-color: #e6e3e3;
+            height: 20px;
+            cursor: pointer;
+            padding: 10px;
+        }
+        .collapse-active, .collapse-title:hover {
+            background-color: #d8d7d7;
+        }
+        .collapse-title:after {
+            content: "\2212";
+            float: right;
+            margin-left: 15px;
+        }
+        .collapse-active:after {
+            content: '\002B';
+        }
+        .collapse-content {
+            display: block;
+        }
+
+        .instrument-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            margin-top: 20px;
+            overflow-y: auto;
+        }
+
+        .instrument-content > div {
+            flex: 1;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            margin-bottom: 15px;
+        }
+
+        .visualiser {
+            display: flex;
+            flex-wrap: nowrap; /* Affianca sempre i div, senza andare a capo */
+            overflow-x: auto; /* Abilita la scrollbar orizzontale se i div superano la larghezza del visualizzatore */
+            max-height: 400px; /* Altezza massima del visualizzatore con scrollbar */
+            overflow-y: auto; /* Abilita la scrollbar verticale se i div superano l'altezza del visualizzatore */
+        }
+
+        .visualiser > div {
+            margin-right: 10px; /* Aggiunto margine per separare i div affiancati */
+        }
+
+        #cursorLine {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background-color: red;
+            pointer-events: none; /* Ignora gli eventi del mouse sul cursore */
+            display: none; /* Nasconde il cursore all'inizio */
+            margin: 0;
+            border: none;
+            padding: none;
+            flex: none;
+        }
+
+        .fixed-header {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background-color: #f2f2f2; /* Cambia il colore di sfondo secondo le tue preferenze */
+        }
+
+        #options {
+            border: 1px solid black;
+            padding: 15px;
+            width: auto;
+        }
+
+        /* Popup container */
+        .popup {
+        position: relative;
+        cursor: pointer;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        }
+        /* The actual popup */
+        .popup .popuptext {
+        visibility: hidden;
+        width: 100px;
+        background-color: #555;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 8px 0;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -50px;
+        }
+
+        /* Popup arrow */
+        .popup .popuptext::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #555 transparent transparent transparent;
+        }
+
+        /* Toggle this class - hide and show the popup */
+        .popup .show {
+        visibility: visible;
+        -webkit-animation: fadeIn 1s;
+        animation: fadeIn 1s;
+        }
+
+        /* Add animation (fade in the popup) */
+        @-webkit-keyframes fadeIn {
+            from {opacity: 0;} 
+            to {opacity: 1;}
+        }
+
+        @keyframes fadeIn {
+            from {opacity: 0;}
+            to {opacity:1 ;}
+        }
+    </style>
+</head>
+<body>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script type="module">
+    import * as THREE from 'https://threejs.org/build/three.module.js'
+
+    // Main
+    window.onload = function () {
+        // Create modal container
+        const popupContainer = document.createElement('div')
+        popupContainer.id = "popup-container"       
+        document.body.appendChild(popupContainer)
+
+        const promptPhrase = document.createElement('p')
+        promptPhrase.innerHTML = "Choose comparison layout:"
+        popupContainer.appendChild(promptPhrase)
+
+        // Create button 1
+        const option1Button = document.createElement('button')
+        option1Button.innerText = "Two instruments"
+        popupContainer.appendChild(option1Button)
+        option1Button.addEventListener('click', function () {
+            popupContainer.remove()
+            document.body.style.display = 'block'
+            // Create lock checkbox
+            const menubar = document.createElement('div')
+            menubar.style.display = 'flex'
+            menubar.style.alignItems = 'center'
+            menubar.style.justifyContent = 'center'
+            document.body.appendChild(menubar)
+
+            const label = document.createElement("label")
+            label.textContent = "Lock frequency: "
+            label.style.marginRight = "8px"
+            menubar.appendChild(label)
+
+            const checkbox = document.createElement("input")
+            checkbox.type = "checkbox"
+            menubar.appendChild(checkbox)
+
+            // Create container for instruments
+            const container = document.createElement('div')
+            container.className = "container"
+            document.body.appendChild(container)
+            
+            const instrument1 = new Instrument(container, 1)       
+            const instrument2 = new Instrument(container, 2)
+
+            // Add lock frequency event listener
+            checkbox.addEventListener('change', function() {
+                if (checkbox.checked) {
+                    instrument1.target = instrument2
+                    instrument2.target = instrument1             
+                } else {
+                    instrument1.target = null
+                    instrument2.target = null
+                }
+            })
+        })
+
+        // Create button 2
+        const option2Button = document.createElement('button')
+        option2Button.innerText = "More instruments"
+        popupContainer.appendChild(option2Button)
+        option2Button.addEventListener('click', function () {
+            popupContainer.remove()
+            document.body.style.overflow = 'auto'
+            document.body.style.display = 'block'
+            document.body.style.height = 'auto'
+            document.body.style.margin = '20px'
+
+            new Matrix(document.body)
+        })
+    }
+
+    // Create collapsible event
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('collapse-title')) {
+            e.target.classList.toggle("collapse-active");
+            const parent = e.target.parentNode;
+            var children = parent.childNodes;
+            var siblings = Array.from(children).filter(node => !node.classList.contains('collapse-title'));
+            for (let n = 0; n < siblings.length; n++) {
+                if (siblings[n].style.display === "none" || siblings[n].style.display === "") {
+                    siblings[n].style.display = "block";
+                } else {
+                    siblings[n].style.display = "none";
+                }
+            }
+        }
+    });
+
+    // Frquency locking management
+    var current = 0
+    function updateLocked(frequency, instr) {
+        instr.freq = frequency
+        instr.slider.value = instr.freq
+        instr.nBox.value = instr.freq
+        const index = parseInt(Math.floor((instr.freq - instr.freqMin) / instr.step))
+            
+        if (instr.frf) {
+            instr.plot.updateCursor(instr.freq)
+        }
+        if (instr.pp && index>=0) {
+            instr.imageA.src = instr.ppA[index];
+            instr.imageB.src = instr.ppB[index];
+            }
+        if (instr.fb && index>=0) {
+            instr.imageTop.src = instr.topData[index];
+            instr.imageBack.src = instr.backData[index];
+        }
+        if (instr.rp) {
+            instr.shv.updateMeshColor(instr.freq)
+        }
+    }
+    
+    class Instrument {
+        constructor(container, number) {
+            this.container = container
+            this.instrumentBox = document.createElement('div')
+            this.instrumentBox.classList.add('instrument')
+            this.container.appendChild(this.instrumentBox)
+
+            this.number = number
+
+            this.target = null
+            this.locked = false
+
+            // Frequency global variables
+            this.freq = null
+            this.freqMin = null
+            this.freqMax = null
+            this.step = null
+            
+            // Controls variables
+            this.controlsCreated = false
+            this.slider = null
+            this.nBox = null
+
+            // Global variables frf
+            this.frf = false
+            this.frfData = null
+            this.plot = null
+            this.cursor = null
+            // Global variables polar pattern
+            this.pp = false
+            this.ppA = []
+            this.ppB = []
+            this.imageA
+            this.imageB
+            // Global variables displacement
+            this.fb = false
+            this.topData = []
+            this.backData = []
+            this.imageTop
+            this.imageBack
+            // Global variables radiation pattern
+            this.rp = false
+            this.rpData = null
+            this.shv
+
+            this.addButton()
+        }
+
+        addButton() {
+            // Add hidden file loader
+            const folderLoader = document.createElement('input')
+            folderLoader.type = 'file'
+            folderLoader.webkitdirectory = true
+            folderLoader.classList.add('hiddenButton')
+            folderLoader.addEventListener('change', () => this.init(folderLoader.files))
+            this.instrumentBox.appendChild(folderLoader)
+
+            // Add visible button
+            const button = document.createElement('button')
+            button.classList.add('loadButton')
+            button.innerText = `Load Instrument ${this.number} Data`
+            button.addEventListener('click', () => {
+                folderLoader.click()
+            })
+            this.instrumentBox.appendChild(button)
+        }
+
+        async init(files) {
+            await this.assignData(files)
+            this.createStructure(files)
+        }
+
+        async assignData(files) {
+
+            // Load files
+            const ppAFiles = [...files].filter(f => f.name.startsWith("A") && f.webkitRelativePath.includes("PP"))
+            const ppBFiles = [...files].filter(f => f.name.startsWith("B") && f.webkitRelativePath.includes("PP"))
+            const topDataFiles = [...files].filter(f => f.name.startsWith("F") && f.webkitRelativePath.includes("FB"))
+            const backDataFiles = [...files].filter(f => f.name.startsWith("B") && f.webkitRelativePath.includes("FB"))
+            const frfFile = [...files].filter(f => f.name.toLowerCase().endsWith(".dat") && f.webkitRelativePath.includes("FRF"))
+            const rpFile = [...files].filter(f => f.name.toLowerCase().endsWith(".vtu") && f.webkitRelativePath.includes("RP"))
+
+            this.ppA = ppAFiles.length > 0 ? await Promise.all(ppAFiles.map(file => readFileAsDataURL(file))) : null;
+            this.ppB = ppBFiles.length > 0 ? await Promise.all(ppBFiles.map(file => readFileAsDataURL(file))) : null;
+            this.topData = topDataFiles.length > 0 ? await Promise.all(topDataFiles.map(file => readFileAsDataURL(file))) : null;
+            this.backData = backDataFiles.length > 0 ? await Promise.all(backDataFiles.map(file => readFileAsDataURL(file))) : null;
+            this.frfData = frfFile.length > 0 ? await frfFile[0].text() : null;
+            this.rpData = rpFile.length > 0 ? await rpFile[0].text() : null;
+
+            // Check if the informations on the frequency are sufficient
+            if (!this.frfData && !this.rpData) {
+                this.askFreq()
+            }
+
+            function readFileAsDataURL(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
+
+        }
+
+        createStructure(files) {
+            // Remove load button
+            const button = this.instrumentBox.querySelector('.loadButton')
+            button.remove()
+
+            // Create controls container
+            const controlContainer = document.createElement('div');
+            controlContainer.classList.add('instrument-controls')
+            this.instrumentBox.appendChild(controlContainer)
+            // Create folder name
+            const nameContainer = document.createElement('div');
+            nameContainer.classList.add('instrument-name');
+            const nameInput = document.createElement('input');
+            nameInput.value = files[0].webkitRelativePath.split('/')[0]
+            nameInput.addEventListener('click', () =>{nameInput.readOnly = false; nameInput.select()})
+            nameContainer.appendChild(nameInput);
+            controlContainer.appendChild(nameContainer);
+
+            // Add content structure
+            const instrumentContent = document.createElement('div')
+            instrumentContent.classList.add('instrument-content')
+            this.instrumentBox.appendChild(instrumentContent);
+
+            const subDiv1 = document.createElement('div')
+            instrumentContent.appendChild(subDiv1);
+            const subDiv1Title = document.createElement('div')
+            subDiv1Title.innerText = "Frequency Response Function"
+            subDiv1Title.classList.add('collapse-title')
+            subDiv1.appendChild(subDiv1Title)
+            
+            this.plot = new FRF(this, subDiv1, controlContainer)
+
+            const subDiv2 = document.createElement('div')
+            instrumentContent.appendChild(subDiv2);
+            const subDiv2Title = document.createElement('div')
+            subDiv2Title.innerText = "Polar pattern"
+            subDiv2Title.classList.add('collapse-title')
+            subDiv2.appendChild(subDiv2Title)
+            
+            new PP(this, subDiv2, controlContainer)
+
+            const subDiv3 = document.createElement('div')
+            instrumentContent.appendChild(subDiv3)
+            const subDiv3Title = document.createElement('div')
+            subDiv3Title.innerText = "Displacement"
+            subDiv3Title.classList.add('collapse-title')
+            subDiv3.appendChild(subDiv3Title)
+            
+            new FB(this, subDiv3, controlContainer)
+
+            const subDiv4 = document.createElement('div')
+            instrumentContent.appendChild(subDiv4)
+            const subDiv4Title = document.createElement('div')
+            subDiv4Title.innerText = "Radiation pattern"
+            subDiv4Title.classList.add('collapse-title')
+            subDiv4.appendChild(subDiv4Title)
+            
+            this.shv = new RP(this, subDiv4, controlContainer)
+        }
+    
+        addControls(parent) {
+            if (this.controlsCreated || this.freqMin === null) { // Check if controls already exist
+                return
+            }
+            const controlsContainer = document.createElement('div')
+            controlsContainer.classList.add('controls-container')
+
+            const frequencyContainer = document.createElement('div')
+            frequencyContainer.classList.add('frequency-container')
+            // Label
+            const labelFreq = document.createElement('label')
+            labelFreq.innerText = 'Frequency:  '
+            frequencyContainer.appendChild(labelFreq)
+            // Number box
+            this.nBox = document.createElement('input')
+            this.nBox.type = 'number'
+            this.nBox.min =this.freqMin
+            this.nBox.max = this.freqMax
+            this.nBox.step = this.step
+            this.nBox.value = this.freqMin
+            frequencyContainer.appendChild(this.nBox);
+            this.nBox.addEventListener('input', () => this.handleListChange())
+            // Hz label
+            const hzLabel = document.createElement('label')
+            hzLabel.innerText = " Hz "
+            frequencyContainer.appendChild(hzLabel)
+            // Slider
+            this.slider = document.createElement('input')
+            this.slider.type = 'range'
+            this.slider.min = this.freqMin
+            this.slider.max = this.freqMax
+            this.slider.step = this.step
+            this.slider.value = this.freqMin
+            frequencyContainer.appendChild(this.slider)
+            this.slider.addEventListener('input', () => this.handleSliderChange())
+            
+            controlsContainer.appendChild(frequencyContainer)
+            parent.appendChild(controlsContainer);
+            this.controlsCreated = true;
+        }
+
+        askFreq() {
+           var input = prompt("Specify start frequency, end frequency and step (100,1000,1): ")
+           var values = input.split(',');
+            if (values.length === 3) {
+                this.freqMin = parseFloat(values[0])
+                this.freqMax = parseFloat(values[1])
+                this.step = parseFloat(values[2])
+            } else {
+                alert("Incorrect input, reload page")
+            }
+        }
+
+        handleSliderChange() {
+            current = this.number
+            this.freq = this.slider.value
+            this.nBox.value = this.slider.value
+            const index = Math.floor((this.freq - this.freqMin) / this.step)
+            
+            if (this.frf) {
+                this.plot.updateCursor(this.freq)
+            }
+            if (this.pp && index>=0) {
+                this.imageA.src = this.ppA[index];
+                this.imageB.src = this.ppB[index];
+            }
+            if (this.fb && index>=0) {
+                this.imageTop.src = this.topData[index];
+                this.imageBack.src = this.backData[index];
+            }
+            if (this.rp) {
+                this.shv.updateMeshColor(this.freq)
+            }
+            if (this.target && current === this.number) {
+                updateLocked(this.freq, this.target)
+            }  
+        }
+        handleListChange() {
+            current = this.number
+            this.freq = this.nBox.value
+            this.slider.value = this.nBox.value
+            const index = parseInt(Math.floor((this.freq - this.freqMin) / this.step))
+            
+            if (this.frf) {
+                this.plot.updateCursor(this.freq)
+            }
+            if (this.pp && index>=0) {
+                this.imageA.src = this.ppA[index];
+                this.imageB.src = this.ppB[index];
+            }
+            if (this.fb && index>=0) {
+                this.imageTop.src = this.topData[index];
+                this.imageBack.src = this.backData[index];
+            }
+            if (this.rp) {
+                this.shv.updateMeshColor(this.freq)
+            }
+            if (this.target && current === this.number) {
+                updateLocked(this.freq, this.target)
+            }  
+        }
+    }
+
+    class FRF {
+        constructor(instrument, container, control) {
+            this.instrument = instrument
+            this.container = container
+            this.control = control
+
+            this.chart = null
+            this.isMousePressed = false
+
+            // Check if content exists
+            if (this.instrument.frfData) {
+                this.loadFRF()
+            } else {
+                this.container.textContent = "Missing content for FRF"
+            }
+            
+        }
+
+        loadFRF() {
+            // Parse data
+            const lines = this.instrument.frfData.split('\n')
+            const freq = []
+            const magnitude = []
+
+            lines.forEach((line, index) => {
+                // Check if the line is not empty and skip the header
+                if (line.trim() && (index !== 0 || !isNaN(line.split(/\s+/)[0]))) {
+                    // Split line by whitespace (spaces or tabs)
+                    const parts = line.trim().split(/\s+/);
+
+                    // Check if line has at least 2 parts
+                    if (parts.length >= 2) {
+                        // Parse and add frequency and magnitude to their respective arrays
+                        freq.push(parseFloat(parts[0]));
+                        magnitude.push(parseFloat(parts[1]));
+                    }
+                }
+            })
+
+            if (!this.instrument.freqMin) {
+                this.instrument.freqMin = Math.min(...freq)
+                this.instrument.freqMax = Math.max(...freq)
+                this.instrument.step = freq[2]-freq[1]
+            }
+            this.instrument.addControls(this.control)
+
+            // Create magnitude label
+            const magnitudeDiv = document.createElement('div')
+            const magnitudeLabel = document.createElement('label')
+            magnitudeLabel.id = "magnitudeLabel"
+            magnitudeDiv.appendChild(magnitudeLabel)
+            const tmp = this.control.querySelector('.controls-container')
+            tmp.appendChild(magnitudeDiv)
+
+            this.instrument.frf = true
+            
+            // Create plot container
+            const plotContainer = document.createElement("div")
+            plotContainer.style.position = "relative"
+            plotContainer.style.width = "100%"
+            plotContainer.style.display = 'block'
+            this.container.appendChild(plotContainer)
+            // Create static plot
+            this.canvas = document.createElement("canvas")
+            this.canvas.width = plotContainer.clientWidth
+            plotContainer.appendChild(this.canvas)
+            
+            const ctx = this.canvas.getContext("2d")
+            
+            this.chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: freq,
+                    datasets: [{
+                        label: 'Magnitude',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        data: magnitude,
+                        fill: false,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: 'Frequency (Hz)',
+                                font: {
+                                    size: 16
+                                }
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'SPL (dB)',
+                                font: {
+                                    size: 16
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        tooltip: {
+                            enabled: false,
+                        },
+                    },
+                    onHover: (event, elements) => {
+                        if (this.isMousePressed) {
+                            if (elements.length > 0) {
+                                var index = elements[0].index;
+                                var dataset = this.chart.data.datasets[0];
+                                var xValue = this.chart.data.labels[index];
+                                var yValue = dataset.data[index];
+
+                                //console.log('Point:', { x: xValue, y: yValue });
+
+                                // Update controls
+                                this.updateControls(xValue, yValue)
+
+                            } else {
+                                var mouseX = event.x;
+                                var chartArea = this.chart.chartArea;
+                                var xValue = this.chart.scales.x.getValueForPixel(mouseX);
+
+                                var index = 0;
+                                var minDistance = Math.abs(xValue - this.chart.data.labels[0]);
+
+                                for (var i = 1; i < this.chart.data.labels.length; i++) {
+                                    var distance = Math.abs(xValue - this.chart.data.labels[i]);
+                                    if (distance < minDistance) {
+                                        minDistance = distance;
+                                        index = i;
+                                    }
+                                }
+
+                                var dataset = this.chart.data.datasets[0];
+                                var yValue = dataset.data[index];
+
+                                //console.log('Point:', { x: Math.round(xValue), y: yValue });
+
+                                // Update controls
+                                this.updateControls(xValue, yValue)
+                                                        
+                            }
+                        }
+                    }
+                }
+            })
+
+            // Red cursor creation
+            this.instrument.cursor = document.createElement('div')
+            this.instrument.cursor.id = "cursorLine"
+            plotContainer.appendChild(this.instrument.cursor)
+
+            plotContainer.addEventListener('mousemove', (e) => {
+                if (this.isMousePressed) {
+                    this.handleCursorMovement(e)
+                }    
+            })
+            plotContainer.addEventListener('click', (e) => {
+                this.isMousePressed = true
+                this.handleCursorMovement(e)
+                setTimeout(() => { this.isMousePressed = false; }, 10);
+            })
+
+            // Toggle mouse pressed
+            plotContainer.addEventListener('mousedown', () => {this.isMousePressed = true})
+            window.addEventListener('mouseup', () => {this.isMousePressed = false})
+
+            // Resizing event
+            window.addEventListener('resize', () => {
+                this.chart.canvas.width = plotContainer.clientWidth
+                this.chart.resize()
+                this.chart.update()
+            })
+        }
+
+        handleCursorMovement = (e) => {
+            const chartArea = this.chart.chartArea;
+
+            const mouseX = e.clientX - this.chart.canvas.getBoundingClientRect().left
+
+            if (mouseX >= chartArea.left && mouseX <= chartArea.right) {
+                this.instrument.cursor.style.display = 'block'
+                this.instrument.cursor.style.left = mouseX + 'px'
+            }
+        }
+
+        updateControls(x, y) {
+            magnitudeLabel.innerText = "Magnitude: " + y.toFixed(2) + " dB"
+            this.instrument.freq = parseFloat(x)
+            this.instrument.slider.value = parseFloat(x)
+            this.instrument.nBox.value = parseFloat(x)
+            this.instrument.handleSliderChange()
+            this.instrument.handleListChange()
+        }
+
+        updateCursor = (xCoord) => {
+            const chartX = this.chart.scales.x.getPixelForValue(xCoord)
+
+            this.instrument.cursor.style.display = 'block'
+            this.instrument.cursor.style.left = chartX + 'px'
+
+            const index = this.chart.data.labels.indexOf(parseInt(xCoord))
+            const magnitudeValue = this.chart.data.datasets[0].data[index].toFixed(2)
+            
+            var magnitudeLabel = this.control.querySelector('#magnitudeLabel')
+            magnitudeLabel.innerText = "Magnitude: " + magnitudeValue + " dB"
+        }
+    }
+
+    class PP {
+        constructor(instrument, container, control) {
+            this.instrument = instrument
+            this.container = container
+            this.control = control
+            // Container for PP ---------------------------------------------
+            this.containerPP = document.createElement('div')
+            this.containerPP.style.display = 'block'
+            this.containerPP.style.padding = '15px'
+            this.container.appendChild(this.containerPP)
+
+            // Create visualiser
+            this.visPP = document.createElement('div')
+            this.visPP.className = 'visualiser'
+            this.containerPP.appendChild(this.visPP)
+  
+            // ---------------------------------------------------------------
+            if (this.instrument.ppA) {
+                this.ppLoad()
+            } else {
+                this.container.textContent = "Missing polar pattern contents"
+            }
+        }
+
+        ppLoad() {
+            this.instrument.pp = true
+
+            // Create folder label
+            //var namePP = document.createElement("h4");
+            //namePP.innerHTML = "Folder: " + this.filePPload.files[0].webkitRelativePath.slice(0, -9);
+            //this.visPP.appendChild(namePP);
+
+            // Create img reader for bridge polar pattern
+            var polar1 = document.createElement("div");
+            this.visPP.appendChild(polar1);
+
+            var labelA = document.createElement("h3");
+            labelA.innerHTML = "Polar pattern perpendicular to bridge (A)";
+            polar1.appendChild(labelA);
+
+            this.instrument.imageA = document.createElement("img");
+            this.instrument.imageA.src = this.instrument.ppA[0];
+            polar1.appendChild(this.instrument.imageA);
+            // Create img reader for top plate polar pattern
+            var polar2 = document.createElement("div");
+            this.visPP.appendChild(polar2);
+
+            var labelB = document.createElement("h3");
+            labelB.innerHTML = "Polar pattern parallel to top plate (B)";
+            polar2.appendChild(labelB);
+
+            this.instrument.imageB = document.createElement("img");
+            this.instrument.imageB.src = this.instrument.ppB[0];
+            polar2.appendChild(this.instrument.imageB);
+
+            this.instrument.imageA.style.width = '100%';
+            this.instrument.imageA.style.height = 'auto';
+            this.instrument.imageB.style.width = '100%';
+            this.instrument.imageB.style.height = 'auto';
+
+            // Create control container with parameters
+            this.instrument.addControls(this.control)
+        }
+
+    }
+
+    class FB {
+        constructor(instrument, container, control) {
+            this.instrument = instrument
+            this.container = container
+            this.control = control
+
+            // Container for FB ---------------------------------------------
+            this.containerFB = document.createElement('div')
+            this.containerFB.style.display = 'block'
+            this.containerFB.style.padding = '15px'
+            this.container.appendChild(this.containerFB)
+
+            // Create visualiser
+            this.visFB = document.createElement('div')
+            this.visFB.className = 'visualiser'
+            this.containerFB.appendChild(this.visFB)
+            // ---------------------------------------------------------------
+
+            if (this.instrument.backData) {
+                this.fbLoad()
+            } else {
+                this.container.textContent = "Missing content"
+            }
+        }
+
+        fbLoad() {
+            this.instrument.fb = true
+
+            // Create folder label
+            //var nameFB = document.createElement("h4");
+            //nameFB.innerHTML = "Folder: " + this.fileFBload.files[0].webkitRelativePath.slice(0, -9);
+            //this.visFB.appendChild(nameFB);
+
+            // Create img reader for top disp
+            var topDisp = document.createElement("div");
+            this.visFB.appendChild(topDisp);
+
+            var labelTop = document.createElement("h3");
+            labelTop.innerHTML = "Displacement of the top (F)";
+            topDisp.appendChild(labelTop);
+
+            this.instrument.imageTop = document.createElement("img");
+            this.instrument.imageTop.src = this.instrument.topData[0];
+            topDisp.appendChild(this.instrument.imageTop);
+
+            // Create img reader for back disp
+            var backDisp = document.createElement("div");
+            this.visFB.appendChild(backDisp);
+
+            var labelBack = document.createElement("h3");
+            labelBack.innerHTML = "Displacement of the back (B)";
+            backDisp.appendChild(labelBack);
+
+            this.instrument.imageBack = document.createElement("img");
+            this.instrument.imageBack.src = this.instrument.backData[0];
+            backDisp.appendChild(this.instrument.imageBack);
+
+            this.instrument.imageTop.style.width = '100%';
+            this.instrument.imageTop.style.height = 'auto';
+            this.instrument.imageBack.style.width = '100%';
+            this.instrument.imageBack.style.height = 'auto';
+
+            // Create control container with parameters
+            this.instrument.addControls(this.control)
+        }
+
+    }
+
+    class RP {
+        constructor(instrument, container, control) {
+            this.instrument = instrument
+            this.container = container
+            this.control = control
+
+            this.mesh
+            this.axes
+            this.distance
+            this.frequencies
+            this.colorsMatrix
+            this.minMaxData
+
+            // Check if content exists
+            if (this.instrument.rpData) {
+                this.init()
+            } else {
+                this.container.textContent = "Missing content for radiation pattern"
+            }
+       
+        }
+
+        parseVTUFile(file) {
+            const parser = new DOMParser()
+            const xmlDoc = parser.parseFromString(file, "text/xml")
+
+            // Extract vertexes coordinates
+            const pointsDataArray = xmlDoc.querySelector('Points DataArray')
+            const pointsText = pointsDataArray.textContent.trim()
+            const vertices = pointsText.split(/\s+/).map(Number)
+
+            // Extract connectivity indexes
+            const connectivityDataArray = xmlDoc.querySelector('Cells DataArray[Name="connectivity"]')
+            const connectivityText = connectivityDataArray.textContent.trim()
+            const indices = connectivityText.split(/\s+/).map(Number)
+
+            // Extract data
+            const pointDataArrays = xmlDoc.querySelectorAll('PointData DataArray')
+            let dataMatrix = []
+            let frequencies = []
+            let minMaxData = []
+
+            pointDataArrays.forEach(dataArray => {
+                // Frequency parsing
+                const nameAttr = dataArray.getAttribute("Name");
+                const freqMatch = nameAttr.match(/freq=(\d+)/);
+                frequencies.push(parseFloat(freqMatch[1]));
+
+                // Magnitude parsing
+                const dataArrayText = dataArray.textContent.trim()
+                const dataValues = dataArrayText.split(/\s+/).map(Number)
+                dataMatrix.push(dataValues)
+
+                // Min and max values for each frequency
+                const minVal = Math.min(...dataValues)
+                const maxVal = Math.max(...dataValues)
+                minMaxData.push({ min: minVal, max: maxVal })
+            })
+
+            return { vertices, indices, frequencies, dataMatrix, minMaxData }
+        }
+
+        mapMagnitudesToColors(dataMatrix) {
+            const colorsMatrix = [];
+
+            for (let i = 0; i < dataMatrix.length; i++) {
+                const row = dataMatrix[i];
+                const minVal = Math.min(...row);
+                const maxVal = Math.max(...row);
+                const colorRow = [];
+
+                for (let j = 0; j < row.length; j++) {
+                    // Normalisation
+                    const normalizedValue = (row[j] - minVal) / (maxVal - minVal);
+
+                    // Mapping
+                    const color = this.valueToColor(normalizedValue);
+                    colorRow.push(color);
+                }
+
+                colorsMatrix.push(colorRow);
+            }
+
+            return colorsMatrix;
+        }
+
+        valueToColor(value) {
+            let r = 0, g = 0, b = 0;
+
+            if (value < 0.2) {
+                // Blu a Ciano
+                r = 0;
+                g = value * 5; // Incrementa G fino a 1 quando value = 0.2
+                b = 1;
+            } else if (value < 0.4) {
+                // Ciano a Verde
+                r = 0;
+                g = 1;
+                b = 1 - (value - 0.2) * 5; // Decrementa B a 0 quando value = 0.4
+            } else if (value < 0.6) {
+                // Verde a Giallo
+                r = (value - 0.4) * 5; // Incrementa R fino a 1 quando value = 0.6
+                g = 1;
+                b = 0;
+            } else if (value < 0.8) {
+                // Giallo a Rosso
+                r = 1;
+                g = 1 - (value - 0.6) * 5; // Decrementa G a 0 quando value = 0.8
+                b = 0;
+            } else {
+                // Rosso
+                r = 1;
+                g = 0;
+                b = 0;
+            }
+
+            // Converti i componenti RGB in una stringa esadecimale o in un formato utilizzabile
+            return [r, g, b]
+        }
+
+        createMesh(vertices, indices, colors) {
+            const geometry = new THREE.BufferGeometry();
+            const material = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                roughness: 0.4,
+                metalness: 0.2
+            });
+            // Set attributes and compute normals
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+            geometry.setIndex(indices);
+            geometry.computeVertexNormals()
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+
+            // Creazione della mesh e aggiunta alla scena
+            this.mesh = new THREE.Mesh(geometry, material);
+            this.mesh.name = 'sphericalHarmonicMesh';
+            this.scene.add(this.mesh);
+        }
+
+        createAxes(dim) {
+            const oldAxes = this.scene.getObjectByName('axes');
+            if (oldAxes) {
+                this.scene.remove(oldAxes);
+            }
+
+            this.axes = new THREE.Group();
+
+            const axisLength = dim;
+            const arrowLength = dim/16;
+
+            const xAxis = new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), axisLength, 0xff0000, arrowLength, arrowLength);
+            const yAxis = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), axisLength, 0x00ff00, arrowLength, arrowLength);
+            const zAxis = new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 0, 0), axisLength, 0x0000ff, arrowLength, arrowLength);
+
+            this.axes.add(xAxis);
+            this.axes.add(yAxis);
+            this.axes.add(zAxis);
+
+            this.axes.name = 'axes';
+            this.scene.add(this.axes);
+        }
+
+        updateMeshColor(freq) {
+            const freqIdx = this.frequencies.findIndex(f => f === parseFloat(freq))
+            const colorsArray = this.colorsMatrix[freqIdx].flatMap(color => [color[0], color[1], color[2]])
+            const colors = new Float32Array(colorsArray)
+
+            const colorAttribute = this.mesh.geometry.getAttribute('color')
+            colorAttribute.array.set(colors)
+            colorAttribute.needsUpdate = true
+
+            const { min, max } = this.minMaxData[freqIdx];
+            this.maxLabel.textContent = `Max: ${max.toFixed(2)} dB`;
+            this.minLabel.textContent = `Min: ${min.toFixed(2)} dB`;
+        }
+
+        createLegend() {
+            // Create legend container
+            const legendContainer = document.createElement('div')
+            legendContainer.style.position = 'absolute'
+            legendContainer.style.top = '50%'
+            legendContainer.style.transform = 'translateY(-50%)'
+            legendContainer.style.right = '20px'
+            legendContainer.style.display = 'flex'
+            legendContainer.style.flexDirection = 'column'
+            legendContainer.style.alignItems = 'center'
+            this.container.style.position = 'relative'
+            this.container.appendChild(legendContainer)
+
+            // Crea l'elemento canvas per l'overlay della legenda
+            const legendCanvas = document.createElement('canvas')
+            legendCanvas.width = 50
+            legendCanvas.height = 300
+
+            const ctx = legendCanvas.getContext('2d')
+
+            // Calcola la posizione e la dimensione del gradiente
+            const gradientWidth = 20
+            const gradientHeight = legendCanvas.height * 0.6
+            const gradientTopOffset = legendCanvas.height * 0.2
+            const gradient = ctx.createLinearGradient(0, gradientTopOffset, 0, gradientTopOffset + gradientHeight)
+
+            // Ordina i colori da blu (in basso) a rosso (in alto)
+            gradient.addColorStop(1, 'blue')
+            gradient.addColorStop(0.75, 'cyan')
+            gradient.addColorStop(0.5, 'green')
+            gradient.addColorStop(0.25, 'yellow')
+            gradient.addColorStop(0, 'red')
+
+            // Disegna il gradiente
+            ctx.fillStyle = gradient;
+            ctx.fillRect(legendCanvas.width - gradientWidth - 10, gradientTopOffset, gradientWidth, gradientHeight)
+
+            // Crea elementi HTML per le etichette
+            this.maxLabel = document.createElement('div');
+            this.maxLabel.textContent = `Max: ${this.minMaxData[0].max.toFixed(2)} dB`
+
+            this.minLabel = document.createElement('div');
+            this.minLabel.textContent = `Min: ${this.minMaxData[0].min.toFixed(2)} dB`
+
+            legendContainer.appendChild(this.maxLabel)
+            legendContainer.appendChild(legendCanvas)
+            legendContainer.appendChild(this.minLabel)
+        }
+
+
+        init() {
+            this.scene = new THREE.Scene()
+
+            var sceneHeight = 400
+            var sceneWidth = computeWidth(this.container)
+
+            this.renderer = new THREE.WebGLRenderer({ antialias: true });
+            this.renderer.setSize(sceneWidth, sceneHeight);
+            this.renderer.setClearColor(0xffffff)
+            const canvas = this.renderer.domElement;
+            this.container.appendChild(canvas);
+
+            // Parse file
+            const { vertices, indices, frequencies, dataMatrix, minMaxData } = this.parseVTUFile(this.instrument.rpData)
+            this.frequencies = [...frequencies]
+            this.minMaxData = [...minMaxData]
+
+            // Map colors
+            this.colorsMatrix = this.mapMagnitudesToColors(dataMatrix)  
+
+            // Create mesh
+            const flatColors = this.colorsMatrix[0].flatMap(color => [color[0], color[1], color[2]]);
+            const colors = new Float32Array(flatColors)
+            this.createMesh(vertices, indices, colors)
+
+            // Get mesh dimensions
+            const box = new THREE.Box3().setFromObject(this.mesh)
+            const size = new THREE.Vector3()
+            box.getSize(size)
+            const maxDim = Math.max(size.x, size.y, size.z)
+            this.distance = maxDim * 1.2
+
+            // Camera
+            var camera = new THREE.PerspectiveCamera(75, sceneWidth / sceneHeight, 50, this.distance * 3);
+            camera.position.set(this.distance, this.distance, this.distance/2);
+            camera.up.set(0, 0, 1)
+            camera.lookAt(this.mesh.position);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 2);
+            this.scene.add(ambientLight);
+
+            const light = new THREE.PointLight(0xffffff, this.distance*1000);
+            this.scene.add(light);
+            light.position.set(camera.position.x/2, camera.position.y, camera.position.z * 1.1);
+
+            // Axes
+            this.createAxes(this.distance * 0.8)
+
+            // Legend
+            this.createLegend()
+
+            // Update animation
+            const animate = () => {
+                requestAnimationFrame(animate);
+                this.renderer.render(this.scene, camera);
+            }
+
+            // Camera controls
+            let dragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+            const rotSpeed = 0.01
+
+            canvas.addEventListener('mouseenter', (event) => {
+                canvas.style.cursor = 'grab'
+            })
+
+            canvas.addEventListener('mousedown', (event) => {
+                dragging = true;
+                previousMousePosition = { x: event.clientX, y: event.clientY };
+                canvas.style.cursor = 'grabbing'
+            })
+
+            canvas.addEventListener('mouseup', () => {
+                dragging = false;
+                canvas.style.cursor = 'grab'
+            })
+
+            canvas.addEventListener('mousemove', (event) => {
+                if (dragging) {
+                    const deltaX = event.clientX - previousMousePosition.x;
+                    const deltaY = event.clientY - previousMousePosition.y;
+                    
+                    const xAxis = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+                    const yAxis = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+
+                    // Horizontal and vertical mouse movement rotation
+                    this.mesh.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(yAxis, deltaX * rotSpeed));
+                    this.mesh.quaternion.premultiply(new THREE.Quaternion().setFromAxisAngle(xAxis, deltaY * rotSpeed));
+
+
+                    this.axes.rotation.copy(this.mesh.rotation);
+
+                    previousMousePosition = { x: event.clientX, y: event.clientY };
+                }
+            })
+
+            canvas.addEventListener('wheel', (event) => {
+                event.preventDefault()
+                camera.position.x += event.deltaY * this.distance/1000
+                camera.position.y += event.deltaY * this.distance/1000
+                camera.position.z += event.deltaY * this.distance/1000
+            })
+
+            // Visualise controls top page
+            this.instrument.rp = true
+            if (!this.instrument.freqMin) {
+                this.instrument.freqMin = Math.min(...this.frequencies)
+                this.instrument.freqMax = Math.max(...this.frequencies)
+                this.instrument.step = this.frequencies[2]-this.frequencies[1]
+            }
+            this.instrument.addControls(this.control)
+
+            // Redraw when resized
+            function computeWidth(element) {
+                const styles = window.getComputedStyle(element)
+                const rightPad = parseInt(styles.getPropertyValue('padding-right'))
+                const leftPad = parseInt(styles.getPropertyValue('padding-left'))
+
+                return element.clientWidth - (rightPad + leftPad)
+            }
+             
+            window.addEventListener('resize', () => {
+                sceneWidth = computeWidth(this.container)
+                this.renderer.setSize(sceneWidth, sceneHeight);
+                camera.aspect = sceneWidth / sceneHeight
+                camera.updateProjectionMatrix()
+            })
+
+            animate();
+        }
+    }
+    
+    class Matrix {
+        constructor(container) {
+            this.container = container
+
+            this.octaveTypeL = []
+            this.octaveTypeC = []
+            this.octaveTypeH = []
+
+            this.text
+
+            this.type = "custom"
+            this.nBands
+            this.startFreq
+            this.endFreq
+
+            this.currentLegend = null
+            this.currentTable = null
+            
+            // Main container
+            this.containerMatrix = document.createElement('div')
+            this.containerMatrix.style.height = '90vh'
+            this.container.appendChild(this.containerMatrix)
+            // Controls container
+            this.controls = document.createElement('div')
+            this.containerMatrix.appendChild(this.controls)
+            // Table container
+            this.table = document.createElement('div')
+            this.containerMatrix.appendChild(this.table)
+            // Create and execute hidden fileLoader
+            this.fileMatrixLoad = document.createElement('input')
+            this.fileMatrixLoad.type = 'file'
+            this.fileMatrixLoad.accept = '.csv'
+            this.fileMatrixLoad.classList.add('hiddenButton')
+            this.fileMatrixLoad.onchange = this.init.bind(this)
+            this.controls.appendChild(this.fileMatrixLoad)
+            this.fileMatrixLoad.click()
+        }
+
+        async init() {
+            // Load the csv file in a txt file
+            this.text = await this.fileMatrixLoad.files[0].text()
+            this.createMainControls()
+            this.createCustomControls()
+            this.createMatrix()
+        }
+        
+        createMainControls() {
+            // Create label
+            const bandLabel = document.createElement('label')
+            bandLabel.innerText = "Choose band subdivision:  "
+            bandLabel.style.fontWeight = 'bold'
+            this.controls.appendChild(bandLabel)
+
+            // Create selection
+            const opSelect = document.createElement('select')
+                var el = ["Custom bands", "1/12 octave bands", "1/3 octave bands"]
+                for (var i = 0; i < el.length; i++) {
+                    var o = document.createElement("option")
+                    o.text = el[i]
+                    o.value = i
+                    opSelect.add(o)
+                }
+            opSelect.selectedIndex = 0
+            this.controls.appendChild(opSelect)
+
+            opSelect.onchange = () => {
+                if (opSelect.value === "0") {
+                    this.type = "custom"
+                    this.createCustomControls()
+                    this.createMatrix()
+                }
+                if (opSelect.value === "1") {
+                    this.type = "onetwelfth"
+                    this.createOctaveControls()
+                    this.createMatrix()
+                }
+                if (opSelect.value === "2") {
+                    this.type = "onethird"
+                    this.createOctaveControls()
+                    this.createMatrix()
+                }
+            }
+        }
+
+        createCustomControls() {
+            var optionsElement = document.getElementById("options")
+            if (optionsElement) {
+                optionsElement.parentNode.removeChild(optionsElement)
+            }
+            // Create div containing custom options
+            const options = document.createElement('div')
+            options.id = "options"
+                const opLabel1 = document.createElement('label')
+                opLabel1.innerHTML = 'Number of bands: '
+                options.appendChild(opLabel1)                          
+                const opNumber1 = document.createElement('input')
+                opNumber1.type = 'number'
+                opNumber1.defaultValue = 18
+                this.nBands = opNumber1.defaultValue
+                options.appendChild(opNumber1)
+                opNumber1.onchange = () => {
+                    this.nBands = opNumber1.value
+                    this.startFreq = opNumber2.value
+                    this.endFreq = opNumber3.value
+                    this.createMatrix()
+                }
+
+                const opLabel2 = document.createElement('label')
+                opLabel2.innerHTML = 'Start freq: '
+                options.appendChild(opLabel2)
+                const opNumber2 = document.createElement('input')
+                opNumber2.type = 'number'
+                opNumber2.defaultValue = 99
+                this.startFreq = opNumber2.defaultValue
+                options.appendChild(opNumber2)
+                opNumber2.onchange = () => {
+                    this.nBands = opNumber1.value
+                    this.startFreq = opNumber2.value
+                    this.endFreq = opNumber3.value
+                    this.createMatrix()
+                }
+                            
+                const opLabel3 = document.createElement('label')
+                opLabel3.innerHTML = 'End freq: '
+                options.appendChild(opLabel3)
+                const opNumber3 = document.createElement('input')
+                opNumber3.type = 'number'
+                opNumber3.defaultValue = 4000
+                this.endFreq = opNumber3.defaultValue
+                options.appendChild(opNumber3)
+                opNumber3.onchange = () => {
+                    this.nBands = opNumber1.value
+                    this.startFreq = opNumber2.value
+                    this.endFreq = opNumber3.value
+                    this.createMatrix()
+                }
+
+            this.controls.appendChild(options)
+        }
+
+        createOctaveControls() {
+            var optionsElement = document.getElementById("options")
+            if (optionsElement) {
+                optionsElement.parentNode.removeChild(optionsElement)
+            }
+            // Create div containing custom options
+            const options = document.createElement('div')
+            options.id = "options"
+                
+                const opLabel1 = document.createElement('label')
+                opLabel1.innerHTML = 'Start freq: '
+                options.appendChild(opLabel1)
+                const opNumber1 = document.createElement('input')
+                opNumber1.type = 'number'
+                opNumber1.defaultValue = 110
+                this.startFreq = opNumber1.defaultValue
+                options.appendChild(opNumber1)
+                opNumber1.onchange = () => {
+                    this.nBands = opNumber2.value
+                    this.startFreq = opNumber1.value
+                    this.createMatrix()
+                }
+
+                const opLabel2 = document.createElement('label')
+                opLabel2.innerHTML = 'Number of bands: '
+                options.appendChild(opLabel2)                          
+                const opNumber2 = document.createElement('input')
+                opNumber2.type = 'number'
+                opNumber2.defaultValue = 18
+                this.nBands = opNumber2.defaultValue
+                options.appendChild(opNumber2)
+                opNumber2.onchange = () => {
+                    this.nBands = opNumber2.value
+                    this.startFreq = opNumber1.value
+                    this.createMatrix()
+                }
+
+            this.controls.appendChild(options)
+        }
+
+        parseData() {
+            // Define variables
+            const freq = []
+            const m = []
+
+            // Divide text file in lines
+            const lines = this.text.split('\n')
+
+            // Parse instruments (first row)
+            const instr = lines[0].split(/[,;\t]/).slice(1, lines[0].length-1)
+
+            // Parse everything remaining
+            for (let i=1; i<lines.length; i++) {
+                const line = lines[i].split(/[,;\t ]/)
+                freq.push(parseFloat(line[0])) // Parse frequencies
+                m.push(line.slice(1, line.length).map(x => Number(x))) // Parse all values
+            }
+            console.log('Original data matrix:')
+            console.log(m)
+
+            return {instr, freq, m}
+        }
+
+        calculateBandsParameters() {
+            // Reset arrays
+            this.octaveTypeL = []
+            this.octaveTypeC = []
+            this.octaveTypeH = []
+
+            // Custom bands parameter calculation
+            if (this.type === "custom") {
+                const startFreqN = Math.log(this.startFreq/1000)/Math.log(Math.pow(2, 1/3))
+                const endFreqN = Math.log(this.endFreq/1000)/Math.log(Math.pow(2, 1/3))
+                const increment = (endFreqN - startFreqN)/(this.nBands-1)
+                const fd = Math.pow(2,1/6)
+
+                for (let n=0; n<this.nBands; n++) {
+                    var fcenter = Math.pow(10,3)*Math.pow(2,(startFreqN+n*increment)/3)
+                    this.octaveTypeC.push(fcenter)
+                    this.octaveTypeH.push(fcenter*fd)
+                    this.octaveTypeL.push(fcenter/fd)
+                }
+            } else if (this.type === "onetwelfth") {
+                for (var i = 0; i < this.nBands; i++) {
+                    const fd = Math.sqrt(2)
+                    this.octaveTypeC.push(this.startFreq * Math.pow(2, i / 10))
+                    this.octaveTypeH.push(this.octaveTypeC[i]*fd)
+                    this.octaveTypeL.push(this.octaveTypeC[i]/fd)
+                }
+            } else if (this.type === "onethird") {
+                const fd = Math.pow(2,1/6)
+                for (var i = 0; i < this.nBands; i++) {
+                    this.octaveTypeC.push(this.startFreq * Math.pow(2, i / 3))
+                    this.octaveTypeH.push(this.octaveTypeC[i]*fd)
+                    this.octaveTypeL.push(this.octaveTypeC[i]/fd)
+                }
+            }
+                
+            console.log('Central frequencies:')
+            console.log(this.octaveTypeC)
+            console.log('Lower frequencies:')
+            console.log(this.octaveTypeL)
+            console.log('Higher frequencies:')
+            console.log(this.octaveTypeH)
+        }
+
+        createDataMatrix(instr, freq, m) {
+            var octaveM = [];
+            //var minArr = [];
+            //var maxArr = [];
+            var zero = new Array(instr.length).fill(0);
+            for (let i=0; i<this.octaveTypeC.length; i++) { 
+                var tmp = new Array(instr.length).fill(0)
+                var n = 0        
+                for(let idx=0; idx<freq.length; idx++) {
+                    if((freq[idx] >= this.octaveTypeL[i]) && (freq[idx] < this.octaveTypeH[i])) {
+                        for (let j=0; j<instr.length; j++) {
+                            tmp[j] = tmp[j] + m[idx][j];
+                        }
+                        n++
+                    } 
+                }
+                for (let j=0; j<instr.length; j++) {
+                    tmp[j] = tmp[j]/n;
+                }
+                if(tmp.toString() !== zero.toString()){
+                    octaveM.push(tmp);
+                    //minArr.push(Math.min(...tmp));
+                    //maxArr.push(Math.max(...tmp));
+                }
+            }
+            console.log('Octave matrix:')
+            console.log(octaveM)
+
+            return octaveM
+        }
+
+        createLegend(min, max) {
+            // Create legend container
+            const legendContainer = document.createElement('div')
+            legendContainer.style.display = 'flex'
+            legendContainer.style.padding = '5px 0 5px 0'
+            this.controls.appendChild(legendContainer)
+            this.currentLegend = legendContainer
+            
+            // Create label
+            const legendLabel = document.createElement('span')
+            legendLabel.innerText = "Mean value SPL: "
+            legendLabel.style.fontWeight = 'bold'
+            legendLabel.style.marginRight = '20px'
+            legendContainer.appendChild(legendLabel)
+
+            // Create min label
+            const minLabel = document.createElement('span')
+            minLabel.innerHTML = ` ${min.toFixed(2)} [dB]`
+            legendContainer.appendChild(minLabel)
+
+            // Create gradient
+            const gradient = document.createElement('div')
+            gradient.style.width = '200px'
+            gradient.style.height = '20px'
+            gradient.style.backgroundImage = 'linear-gradient(to right, blue, cyan, green, yellow, red)'
+            gradient.style.margin = '0 10px'
+            legendContainer.appendChild(gradient)
+
+            // Create max label
+            const maxLabel = document.createElement('span')
+            maxLabel.innerHTML = ` ${max.toFixed(2)} [dB]`
+            legendContainer.appendChild(maxLabel)
+        }
+
+        createTable(instr, octaveM, colors) {
+            var tbl = document.createElement('table')
+            this.currentTable = tbl
+            const header = tbl.createTHead()
+            header.classList.add('fixed-header')
+            const headerRow = header.insertRow()
+            headerRow.insertCell()
+            for (let band=0; band<octaveM.length; band++) {
+                const hf = headerRow.insertCell()
+                hf.innerText = this.octaveTypeC[band].toFixed(1)
+                hf.style.writingMode = 'vertical-rl'
+                hf.style.transform = 'scale(-1)'
+            }
+
+            const tbody = tbl.createTBody()
+            for(let row=0; row<instr.length; row++) {
+                // Instrument name
+                const tr = tbody.insertRow()
+                const type = tr.insertCell()
+                type.innerText = instr[row]
+                type.className = 'instrumentName'
+
+                // Instrument data
+                for(let col=0; col< octaveM.length; col++) {
+                    const td = tr.insertCell()
+                    td.className = "popup"
+                    td.style.border = "1px solid black"
+                    td.innerText = '\xa0\xa0\xa0\xa0'
+                    td.value = octaveM[col][row];
+                    td.style.backgroundColor = colors[col][row]
+
+                    const tt = document.createElement('span')
+                    tt.className = 'popuptext'
+                    tt.innerText = td.value.toFixed(2) + " dB"
+                    td.appendChild(tt)
+
+                    td.onclick = function() {
+                        tt.classList.toggle("show")
+                    }
+                } 
+            }
+
+            this.table.appendChild(tbl)
+
+            // Utilities
+            const controlsHeight = this.controls.clientHeight
+            this.table.style.height =  `${this.containerMatrix.getBoundingClientRect().height - controlsHeight}px`
+            this.table.style.overflow = 'auto'
+            
+            window.onresize = () => {
+                this.table.style.height =  `${this.containerMatrix.getBoundingClientRect().height - controlsHeight}px`
+                this.table.style.overflow = 'auto'
+            }
+
+        }
+
+        mapValuesToColors(matrix) {
+            // Definizione dei colori RGB
+            const colors = [
+                [0, 0, 255], // Blu
+                [0, 255, 255], // Ciano
+                [0, 255, 0], // Verde
+                [255, 255, 0], // Giallo
+                [255, 0, 0] // Rosso
+            ];
+
+            // Calcolo di minimo e massimo nella matrice
+            let min = Infinity, max = -Infinity;
+            matrix.forEach(row => row.forEach(value => {
+                if (!isNaN(value)) {
+                    if (value < min) min = value;
+                    if (value > max) max = value;
+                }
+            }));
+
+            // Assicurati che min e max abbiano valori validi per evitare divisioni per 0
+            if (min === Infinity || max === -Infinity) {
+                min = 0;
+                max = 0;
+            }
+
+            // Mappatura dei valori a colori
+            const colorM = matrix.map(row => 
+                row.map(value => {
+                    if (isNaN(value)) {
+                        // Se il valore è NaN, restituisci il colore bianco
+                        return `rgb(255,255,255)`;
+                    }
+
+                    // Calcolo della posizione relativa del valore nel range [min, max]
+                    const position = (value - min) / (max - min);
+
+                    // Determinazione degli indici dei colori da interpolare
+                    const index = Math.floor(position * (colors.length - 1));
+                    const nextIndex = Math.min(index + 1, colors.length - 1);
+
+                    // Calcolo del rapporto di interpolazione
+                    const ratio = (position * (colors.length - 1)) - index;
+
+                    // Interpolazione dei colori
+                    const color = colors[index].map((component, i) => 
+                        Math.round(component + (colors[nextIndex][i] - component) * ratio)
+                    );
+
+                    return `rgb(${color.join(',')})`;
+                })
+            );
+
+            return { colorM, min, max };
+        }
+
+
+        createMatrix() {
+
+            // Remove old objects if present
+            if (this.currentTable) {
+                this.currentTable.remove();
+            }
+            if (this.currentLegend) {
+                this.currentLegend.remove();
+            }
+
+            // Parse data
+            const {instr, freq, m} = this.parseData()
+
+            // Calculate parameters of the bands
+            this.calculateBandsParameters()
+
+            // Create octave matrix
+            const octaveM = this.createDataMatrix(instr, freq, m)
+            
+            // Color mapping
+            const {colorM, min, max} = this.mapValuesToColors(octaveM)
+
+            // Create legend
+            this.createLegend(min, max)
+
+            // Create table
+            this.createTable(instr, octaveM, colorM)
+
+            // Z-score standardization
+            /*
+            function calcStatistics(data) {
+                const numRows = data.length;
+                const numCols = data[0].length;
+
+                const means = [];
+                const stdDevs = [];
+                const zScoreNormalizedData = [];
+
+                for (let i = 0; i < numRows; i++) {
+                    // Mean
+                    const row = data[i];
+                    const mean = row.reduce((acc, val) => acc + val, 0) / numCols;
+                    means.push(mean);
+
+                    // Standard deviation
+                    const squaredDiffs = row.map(val => Math.pow(val - mean, 2));
+                    const sumSquaredDiffs = squaredDiffs.reduce((acc, val) => acc + val, 0);
+                    const stdDev = Math.sqrt(sumSquaredDiffs / numCols);
+                    stdDevs.push(stdDev);
+
+                    // Z-score normalization
+                    const zScoreNormalizedRow = row.map(val => (val - mean) / stdDev);
+                    zScoreNormalizedData.push(zScoreNormalizedRow);
+                }
+
+                return zScoreNormalizedData
+            }
+
+            // Generate data normalization, min and max
+            const octaveMNorm = calcStatistics(octaveM)
+            const extremeValues = findMinMax(octaveMNorm)
+            
+            console.log("Octave matrix - normalized: ")
+            console.log(octaveMNorm)
+            */
+        }
+    
+    }
+
+</script>
+
+</body>
+</html>
