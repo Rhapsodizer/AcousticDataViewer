@@ -24,6 +24,10 @@ Simply download the `index.html` file and open it with your favorite browser. Re
 > [!NOTE]
 > Internet connection is required to load external libraries.
 
+A live version of the application is available [here](https://rhapsodizer.github.io/AcousticDataViewer/).
+
+Demo files can be downloaded [here](https://github.com/Rhapsodizer/ExampleData).
+
 Supported files:
 - Frequency Response Function: `.dat` (column 1: frequency values, column 2: magnitude values)
 - Polar Patterns and Displacements: all supported `image` files (`.jpg`,`.png`,`.tiff`, etc)
