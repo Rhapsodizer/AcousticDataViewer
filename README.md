@@ -55,11 +55,16 @@ The instrument data have to follow the structure:
 ---
 
 ## Usage
-Select layout (two instruments or several instruments comparison).
+Select layout (two instruments or several instruments comparison). <br><br>
+<img src="https://github.com/Rhapsodizer/img/blob/main/viewer/home.png" width=50%>
+
 
 ### Two instruments comparison
+<img src="https://github.com/Rhapsodizer/img/blob/main/viewer/2instr.png" width=50%>
 
 ### Multiple instruments comparison
+<img src="https://github.com/Rhapsodizer/img/blob/main/viewer/tableColors.PNG" width=50%>
+
 ---
 
 ## License
