@@ -38,12 +38,28 @@ Supported files:
 - Frequency Response Function: `.dat` (column 1: frequency values, column 2: magnitude values)
 - Polar Patterns and Displacements: all supported `image` files (`.jpg`,`.png`,`.tiff`, etc)
 - Radiation Pattern: `.vtu` files ([_Unstructured VTK_](https://docs.vtk.org/en/latest/design_documents/VTKFileFormats.html))
+- Multiple instruments comparison: `.csv` (first row: names, first column: frequency values)
 
+The instrument data have to follow the structure: 
+```
+|__instrumentFolder
+      |__ FRF
+      |__ PP
+      |__ FB
+      |__ RP
+```
+
+> [!IMPORTANT]
+> Images representing the polar pattern are named with the convention: `A` or `B` + progressive number. 
+> Images representing the displacements are named with the convention: `F` (front) or `B` (back) + progressive number.
 ---
 
 ## Usage
+Select layout (two instruments or several instruments comparison).
 
+### Two instruments comparison
 
+### Multiple instruments comparison
 ---
 
 ## License
