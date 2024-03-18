@@ -6,20 +6,26 @@
 [![Static Badge](https://img.shields.io/badge/based_on-Chart.js-blue)](https://www.chartjs.org/) [![Static Badge](https://img.shields.io/badge/based_on-Three.js-orange)
 ](https://threejs.org/)
 
+[Features](#features) • [Setup and Requirements](#setup-and-requirements) • [Usage](#usage) • [License](#license)
+
 ---
 
 ## Features
 - Single page, frontend only
 - Two instruments comparison or multiple instruments comparison
-- Frequency Response Function visualization
-- Polar Patterns visualization
-- Displacements visualization
-- Radiation Pattern visualization
+- Frequency Response Function visualization <br>
+  <img src="https://github.com/Rhapsodizer/img/blob/main/viewer/frf0.PNG" width=50%>
+- Polar Patterns visualization <br>
+  <img src="https://github.com/Rhapsodizer/img/blob/main/viewer/pp0.PNG" width=50%>
+- Displacements visualization <br>
+  <img src="https://github.com/Rhapsodizer/img/blob/main/viewer/fb.png" width=50%>
+- Radiation Pattern visualization <br>
+  <img src="https://github.com/Rhapsodizer/img/blob/main/viewer/rad0.PNG" width=50%>
 
 ---
 
 ## Setup and Requirements
-Simply download the `index.html` file and open it with your favorite browser. Rename it at your discretion.
+Simply download the `index.html` file and open it with your favorite browser. Rename it at your discrection.
 
 > [!NOTE]
 > Internet connection is required to load external libraries.
