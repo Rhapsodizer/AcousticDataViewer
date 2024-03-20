@@ -6,6 +6,8 @@
 [![Static Badge](https://img.shields.io/badge/based_on-Chart.js-blue)](https://www.chartjs.org/) [![Static Badge](https://img.shields.io/badge/based_on-Three.js-orange)
 ](https://threejs.org/)
 
+A web application for visualizing and comparing data regarding musical instruments, particularly **guitars** and **violins**.
+
 [Features](#features) • [Setup and Requirements](#setup-and-requirements) • [Usage](#usage) • [License](#license)
 
 ---
