@@ -1,4 +1,4 @@
-# Web Application for Acoustic Data Visualization
+# Web Application for Acoustic Data Visualization <img src="https://github.com/Rhapsodizer/img/blob/main/viewer/logo%20final.png" alt="icon" height=100>
 
 ![Static Badge](https://img.shields.io/badge/web-blue)
 [![Live Demo](https://img.shields.io/badge/demo-online-green.svg)](https://rhapsodizer.github.io/AcousticDataViewer/) ![Static Badge](https://img.shields.io/badge/made_in-JavaScript-red)
