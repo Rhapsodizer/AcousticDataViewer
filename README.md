@@ -72,5 +72,5 @@ Select layout (two instruments or several instruments comparison). <br><br>
 ## License
 >
 
-This project is licensed under the terms of the [...] license.
+This project is licensed under the terms of the MIT license.
 
