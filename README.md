@@ -60,12 +60,19 @@ The instrument data have to follow the structure:
 Select layout (two instruments or several instruments comparison). <br><br>
 <img src="https://github.com/Rhapsodizer/img/blob/main/viewer/home.png" width=50%>
 
-
 ### Two instruments comparison
 <img src="https://github.com/Rhapsodizer/img/blob/main/viewer/2instr.png" width=50%>
 
+- click on buttons to load instruments data
+- scroll to visualize everything
+- click on titles to hide and show contents
+- lock frequency to update visualization of both instruments with the same value
+
 ### Multiple instruments comparison
 <img src="https://github.com/Rhapsodizer/img/blob/main/viewer/tableColors.PNG" width=50%>
+
+- choose the type of band subdivision
+- update the values inside the boxes
 
 ---
 
